@@ -422,6 +422,7 @@ const AdminPanel = ({ portfolio, setPortfolio }: { portfolio: PortfolioItem[], s
   const [password, setPassword] = useState('');
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleLogin = () => {
     if (password === '1111') {
@@ -440,10 +441,72 @@ const AdminPanel = ({ portfolio, setPortfolio }: { portfolio: PortfolioItem[], s
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 10MB 이상 파일 제한
+      if (file.size > 10 * 1024 * 1024) {
+        alert('파일 크기가 너무 큽니다. 10MB 이하의 이미지를 선택해주세요.');
+        return;
+      }
+
+      setIsProcessing(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage(reader.result as string);
+      
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // 모바일 및 localStorage 용량 최적화를 위해 크기 제한 강화
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            alert('이미지 처리에 실패했습니다.');
+            setIsProcessing(false);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          try {
+            // JPEG 0.6 압축으로 용량 대폭 최적화
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            setUploadedImage(dataUrl);
+          } catch (err) {
+            console.error('Image compression error:', err);
+            alert('이미지 압축 중 오류가 발생했습니다.');
+          } finally {
+            setIsProcessing(false);
+          }
+        };
+        img.onerror = () => {
+          alert('이미지를 불러오는데 실패했습니다.');
+          setIsProcessing(false);
+        };
+        img.src = event.target?.result as string;
       };
+      
+      reader.onerror = () => {
+        alert('파일을 읽는데 실패했습니다.');
+        setIsProcessing(false);
+      };
+      
       reader.readAsDataURL(file);
     }
   };
@@ -557,8 +620,15 @@ const AdminPanel = ({ portfolio, setPortfolio }: { portfolio: PortfolioItem[], s
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-gray-500">이미지 업로드</label>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm" />
-                    {uploadedImage && (
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      disabled={isProcessing}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm disabled:opacity-50" 
+                    />
+                    {isProcessing && <p className="text-xs text-blue-500 animate-pulse">이미지 처리 중...</p>}
+                    {uploadedImage && !isProcessing && (
                       <div className="mt-2 aspect-video rounded-lg overflow-hidden border border-white/10">
                         <img src={uploadedImage} className="w-full h-full object-cover" alt="Preview" />
                       </div>
@@ -652,7 +722,14 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('pixel_portfolio', JSON.stringify(portfolio));
+    try {
+      localStorage.setItem('pixel_portfolio', JSON.stringify(portfolio));
+    } catch (error) {
+      console.error('Failed to save portfolio to localStorage:', error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        alert('저장 공간이 부족합니다. 기존 포트폴리오를 삭제하거나 더 작은 이미지를 사용해주세요.');
+      }
+    }
   }, [portfolio]);
 
   return (
