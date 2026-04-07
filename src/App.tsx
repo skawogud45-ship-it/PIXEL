@@ -114,10 +114,11 @@ const Hero = () => {
       </div>
 
       {/* Watermark Pattern */}
-      <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none select-none overflow-hidden" 
+      <div className="absolute inset-0 z-0 opacity-[0.03] md:opacity-[0.05] pointer-events-none select-none overflow-hidden" 
            style={{ 
-             backgroundImage: `url("data:image/svg+xml,%3Csvg width='150' height='80' viewBox='0 0 150 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='900' font-size='20' fill='white' text-anchor='middle' dominant-baseline='middle'%3EPIXEL%3C/text%3E%3C/svg%3E")`,
-             backgroundRepeat: 'repeat'
+             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Ctext x='50%25' y='50%25' font-family='system-ui, sans-serif' font-weight='900' font-size='14' fill='white' text-anchor='middle' dominant-baseline='middle' transform='rotate(-25, 60, 60)'%3EPIXEL%3C/text%3E%3C/svg%3E")`,
+             backgroundRepeat: 'repeat',
+             backgroundSize: '120px 120px'
            }}>
       </div>
 
